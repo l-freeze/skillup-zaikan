@@ -1,66 +1,154 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# このリポジトリについて
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+資材管理アプリケーションの作成を通じてクリーンアーキテクチャーを学んでもらう為の教材として用意したものです。
+デスクや炊飯器やゲーム機などの資材が家のどの部屋にあるのかを管理するアプリケーションです。
 
-## About Laravel
+# 環境の用意
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+### 0からの場合
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+1. Docker環境インストール
+1. Laravel install
+   ```
+   curl -s https://laravel.build/skillup-zaikan?with=pgsql|bash`
+   ```
+1. 起動
+    ```
+    ./vendor/bin/sail up -d
+    ```
+1. バージョン確認
+    ```
+    $ ./vendor/bin/sail exec laravel.test php artisan tinker -V
+    Laravel Framework 11.21.0
+    ```
+1. デバッグ関連
+    ```bash
+    ./vendor/bin/sail artisan sail:publish
+   
+    # php.iniの変更
+    docker/8.3/php.ini
+    ```
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### 1からの場合
 
-## Learning Laravel
+1. git clone [this repository]
+   1composer install
+    ```shell
+    docker run --rm -it -v $PWD:/app -u `id -u`:`id -g` composer composer
+    ```
+1. 起動
+    ```
+    ./vendor/bin/sail up -d
+    ```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+# 前提
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+- 資材は必ず家の中にあるxw
+- 家の内部は仕切られていて必ず部屋/トイレ/廊下などの名称がある
+- つまり、資材は必ずどこかの部屋にある
+- 資材の所有者ひとりまたは不特定
+- 家以外の環境は考慮しない
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+# 実装手順
 
-## Laravel Sponsors
+1. エンティティ、ドメインバリデーションを考える
+1. ユースーケース、ユースケースのI/Oを考える
+1. 永続化を検討する
+1. プレゼンテーション層（I/O、腐敗防止層）を考える
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+ドメインエキスパートとの距離が近い場合は1から実施、コンテキストを適切に切る
+遠い場合は2を先に実施、コンテキストは推測の範囲で適当に切る
 
-### Premium Partners
+# 重要な事
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+- ドメインやアプリケーションに関係しない事柄を考えてはいけない
+  - 遅延評価etc
+    - その手のパフォーマンスはドメインには関係ない、後で考慮するのは構わない
+  - メモリの使用量を気にする
+    - クリーンアーキテクチャーやめろ
+      - ドメイン層を用いなければ良いが、その場合クリーンアーキテクチャーを用いるメリットも薄い
+  - 実行速度を気にする
+    - クリーンアーキテクチャーやめろ、使用言語変えろ
+  - データベースのパフォーマンス
+    - DB都合でエンティティを単発で扱うかリストで扱うかはドメインに関係ない
 
-## Contributing
+# エンティティ
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```mermaid
+classDiagram
+  House <|-- User
+  House <|-- Room
+  Room <|-- Item
+  class User {
+    int Id
+    string Name
+  }
+  class House {
+    string Identifier
+    string Name
+    User.Id[] userIds
+    public addRoom(Room) void
+  }
+  class Room {
+    string Identifier
+    string Name
+  }
+  class Item {
+    string Identifier
+    string Name
+    string Description
+    bool IsImportant
+    Room.Identifier RoomIdentifier
+    User.Id UserId
+  }
+```
 
-## Code of Conduct
+# ディレクトリ構成
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```shell
+./packages/
+└── ZaikoKanri
+    ├── Application
+    │   └── UseCase
+    │       ├── House
+    │       │   ├── Create
+    │       │   └── List
+    │       ├── Item
+    │       │   └── Create
+    │       └── Room
+    │           ├── Create
+    │           └── List
+    ├── Domain
+    │   ├── Entity
+    │   ├── Repository
+    │   └── Value
+    ├── Infrastructure
+    │   └── Repository
+    └── UserInterface
+```
 
-## Security Vulnerabilities
+# テストユーザー作成
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+1. 作成
+    ```
+    $ ./vendor/bin/sail artisan migrate
+    $ ./vendor/bin/sail tinker
+    > $user = new App\Models\User()
+    > $user->name = 'test';
+    > $user->email = 'test@example.com';
+    > $user->email_verified_at = now();
+    > $user->password = Hash::make('password')
+    > $user->save()
+    ```
+1. 確認
+    ```
+    laravel=# select * from users;
+    id | name |      email       |  email_verified_at  |                           password                           | remember_token |     created_at      |     updated_at
+    ----+------+------------------+---------------------+--------------------------------------------------------------+----------------+---------------------+---------------------
+    1 | test | test@example.com | 2024-09-01 06:50:59 | $2y$12$MTedj84bRajcMljPRGwJM.HFZ9q3ltlePmJNzC3vcdeEhHkKduXJK |                | 2024-09-01 06:52:02 | 2024-09-01 06:52:02
+    ```
+1. ログイン確認
+    ```
+    $ ./vendor/bin/sail tinker
+    > Auth::loginUsingId(1)
+    ```

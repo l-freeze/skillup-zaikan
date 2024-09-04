@@ -1,0 +1,61 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - ready_for_review
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+
+    services:
+      # https://docs.github.com/en/actions/use-cases-and-examples/using-containerized-services/creating-postgresql-service-containers
+      postgres:
+        image:
+          postgres:16
+        env:
+          POSTGRES_USER: 'test'
+          POSTGRES_PASSWORD: 'password'
+          POSTGRES_DB: 'testing'
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    strategy:
+      fail-fast: true
+      max-parallel: 1
+      matrix:
+        php: [ '8.3' ]
+
+    name: php:${{ matrix.php }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          #extensions: dom, curl, libxml, mbstring, iconv, intl, zip, pdo_sqlite
+          extensions: mbstring
+          coverage: xdebug
+          tools: flex
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+      - name: env
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+      - name: Test
+        run: vendor/bin/pest
